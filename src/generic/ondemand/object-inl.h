@@ -68,6 +68,7 @@ simdjson_really_inline object::~object() noexcept {
   if (!error && has_next) {
     logger::log_event(*iter, "unfinished", "object");
     iter->skip_container();
+    iter.release();
   }
 }
 
@@ -80,6 +81,7 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
       at_start = false;
     } else {
       if ((error = iter->has_next_field().get(has_next) )) { return report_error(); }
+      if (!has_next) { iter.release(); }
     }
   }
   while (has_next) {
@@ -96,6 +98,7 @@ simdjson_really_inline simdjson_result<value> object::operator[](const std::stri
     logger::log_event(*iter, "no match", key, -2);
     iter->skip(); // Skip the value entirely
     if ((error = iter->has_next_field().get(has_next) )) { return report_error(); }
+    if (!has_next) { iter.release(); }
   }
 
   // If the loop ended, we're out of fields to look at.
@@ -145,7 +148,8 @@ simdjson_really_inline bool object::iterator::operator!=(const object::iterator 
 }
 simdjson_really_inline object::iterator &object::iterator::operator++() noexcept {
   if (o->error) { return *this; }
-  o->error = o->iter->has_next_element().get(o->has_next); // If there's an error, has_next stays true.
+  o->error = o->iter->has_next_field().get(o->has_next); // If there's an error, has_next stays true.
+  if (!o->has_next) { o->iter.release(); }
   return *this;
 }
 

@@ -64,6 +64,7 @@ simdjson_really_inline array::~array() noexcept {
   if (!error && has_next) {
     logger::log_event(*iter, "unfinished", "array");
     iter->skip_container();
+    iter.release();
   }
 }
 
@@ -85,6 +86,7 @@ simdjson_really_inline array::iterator array::end() noexcept {
 simdjson_really_inline error_code array::report_error() noexcept {
   SIMDJSON_ASSUME(error);
   has_next = false;
+  iter.release();
   return error;
 }
 
@@ -107,6 +109,7 @@ simdjson_really_inline bool array::iterator::operator!=(const array::iterator &)
 simdjson_really_inline array::iterator &array::iterator::operator++() noexcept {
   if (a->error) { return *this; }
   a->error = a->iter->has_next_element().get(a->has_next); // If there's an error, has_next stays true.
+  if (!a->has_next) { a->iter.release(); }
   return *this;
 }
 
